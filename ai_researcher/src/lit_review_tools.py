@@ -1,15 +1,17 @@
 import requests
 import re
 import json
+import os
 
 # Define the paper search endpoint URL
 search_url = 'https://api.semanticscholar.org/graph/v1/paper/search/'
 graph_url = 'https://api.semanticscholar.org/graph/v1/paper/'
 rec_url = "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/"
 
-with open("../keys.json", "r") as f:
-    keys = json.load(f)
-S2_KEY = keys["s2_key"]
+# with open("../keys.json", "r") as f:
+#     keys = json.load(f)
+# S2_KEY = keys["s2_key"]
+S2_KEY = os.environ["S2_KEY"]
 
 def KeywordQuery(keyword):
     ## retrieve papers based on keywords
@@ -20,7 +22,7 @@ def KeywordQuery(keyword):
     }
     headers = {'x-api-key': S2_KEY}
     response = requests.get(search_url, params=query_params, headers = headers)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -35,7 +37,7 @@ def PaperQuery(paper_id):
     }
     headers = {'x-api-key': S2_KEY}
     response = requests.get(url = rec_url + paper_id, params = query_params, headers = headers)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -55,7 +57,7 @@ def PaperDetails(paper_id, fields='title,year,abstract,authors,citationCount,ven
 def GetAbstract(paper_id):
     ## get the abstract of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return paper_details["abstract"]
     else:
@@ -64,7 +66,7 @@ def GetAbstract(paper_id):
 def GetCitationCount(paper_id):
     ## get the citation count of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return int(paper_details["citationCount"])
     else:
@@ -73,7 +75,7 @@ def GetCitationCount(paper_id):
 def GetCitations(paper_id):
     ## get the citation list of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return paper_details["citations"]
     else:
@@ -87,7 +89,7 @@ def GetReferences(paper_id):
     ## get details of each reference, keep first 20 to save costs
     detailed_references = [PaperDetails(ref["paperId"], fields='title,year,abstract,citationCount') for ref in references if ref["paperId"]]
     detailed_references = paper_filter(detailed_references)[ : 20]
-    
+
     if paper_details is not None:
         return detailed_references
     else:
@@ -146,11 +148,11 @@ def parse_and_execute(output):
         paper_id = match.group(1) if match else None
         if paper_id:
             return GetReferences(paper_id)
-    
+
     return None
 
 def format_papers_for_printing(paper_lst, include_abstract=True, include_score=True, include_id=True):
-    ## convert a list of papers to a string for printing or as part of a prompt 
+    ## convert a list of papers to a string for printing or as part of a prompt
     output_str = ""
     for paper in paper_lst:
         if include_id:
@@ -160,6 +162,9 @@ def format_papers_for_printing(paper_lst, include_abstract=True, include_score=T
             output_str += "abstract: " + paper["abstract"].strip() + "\n"
         elif include_abstract and "tldr" in paper and paper["tldr"] and paper["tldr"]["text"]:
             output_str += "tldr: " + paper["tldr"]["text"].strip() + "\n"
+        # add year
+        if "year" in paper:
+            output_str += "year: " + str(paper["year"]) + "\n"
         if "score" in paper and include_score:
             output_str += "relevance score: " + str(paper["score"]) + "\n"
         output_str += "\n"
@@ -185,7 +190,7 @@ def dedup_paper_bank(sorted_paper_bank):
             if sorted_paper_bank[i]["abstract"] == sorted_paper_bank[j]["abstract"]:
                 idx_to_remove.append(i)
                 break
-    
+
     deduped_paper_bank = [paper for i, paper in enumerate(sorted_paper_bank) if i not in idx_to_remove]
     return deduped_paper_bank
 
@@ -204,4 +209,3 @@ if __name__ == "__main__":
     # print (parse_and_execute("PaperQuery(\"b626560f19f815808a289ef5c24a17c57320da70\")"))
     # print (parse_and_execute("KeywordQuery(\"language model bias in storytelling\")"))
 
-    

@@ -11,7 +11,7 @@ rec_url = "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/"
 # with open("../keys.json", "r") as f:
 #     keys = json.load(f)
 # S2_KEY = keys["s2_key"]
-S2_KEY = os.environ["S2_KEY"]
+S2_KEY = os.environ["S2_API_KEY"]
 
 def KeywordQuery(keyword):
     ## retrieve papers based on keywords
@@ -155,7 +155,7 @@ def format_papers_for_printing(paper_lst, include_abstract=True, include_score=T
     ## convert a list of papers to a string for printing or as part of a prompt
     output_str = ""
     for paper in paper_lst:
-        if include_id:
+        if include_id and 'paperId' in paper:
             output_str += "paperId: " + paper["paperId"].strip() + "\n"
         output_str += "title: " + paper["title"].strip() + "\n"
         if include_abstract and "abstract" in paper and paper["abstract"]:
